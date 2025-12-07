@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invernadero ESP32</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #222; color: white; }
+        button { width: 100%; padding: 15px; margin: 10px 0; font-size: 18px; border: none; border-radius: 10px; cursor: pointer; }
+        .btn-connect { background-color: #007bff; color: white; }
+        .btn-open { background-color: #28a745; color: white; }
+        .btn-close { background-color: #dc3545; color: white; }
+        .status { font-size: 14px; color: #aaa; margin-bottom: 20px; }
+        h1 { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>🌱 Smart Invernadero</h1>
+    <p class="status" id="statusLabel">Estado: Desconectado</p>
+
+    <button class="btn-connect" onclick="conectarBluetooth()">🔍 BUSCAR Y CONECTAR</button>
+    <hr style="border-color: #444;">
+    <button class="btn-open" onclick="enviarComando('1')">OPEN (Ventana)</button>
+    <button class="btn-close" onclick="enviarComando('0')">CLOSE (Ventana)</button>
+
+    <script>
+        // --- TUS UUIDs (Mismos que en Python) ---
+        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const CHAR_UUID_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; // Escribir aquí
+
+        let dispositivo;
+        let caracteristica;
+
+        async function conectarBluetooth() {
+            try {
+                document.getElementById("statusLabel").innerText = "Estado: Buscando...";
+                
+                // 1. Pedir al usuario que seleccione el dispositivo
+                dispositivo = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'ESP32' }], // Busca nombres que empiecen con ESP32
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                // 2. Conectarse al servidor GATT
+                const server = await dispositivo.gatt.connect();
+                
+                // 3. Obtener el servicio y la característica
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                caracteristica = await service.getCharacteristic(CHAR_UUID_RX);
+
+                document.getElementById("statusLabel").innerText = "Estado: 🟢 CONECTADO a " + dispositivo.name;
+                document.getElementById("statusLabel").style.color = "#0f0";
+                
+                // (Opcional) Detectar desconexión
+                dispositivo.addEventListener('gattserverdisconnected', () => {
+                    document.getElementById("statusLabel").innerText = "Estado: 🔴 Desconectado";
+                    document.getElementById("statusLabel").style.color = "#aaa";
+                });
+
+            } catch (error) {
+                console.log(error);
+                document.getElementById("statusLabel").innerText = "Error: " + error;
+            }
+        }
+
+        async function enviarComando(valor) {
+            if (!caracteristica) {
+                alert("¡Primero conecta el Bluetooth!");
+                return;
+            }
+            // Codificar el texto a bytes (ArrayBuffer)
+            const encoder = new TextEncoder();
+            await caracteristica.writeValue(encoder.encode(valor));
+            console.log("Comando enviado:", valor);
+        }
+    </script>
+</body>
+</html>
