@@ -3,169 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invernadero IoT Pro</title>
+    <title>Invernadero DIAGNOSTICO</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
-        :root { --primary: #00e676; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; text-align: center; }
+        body { font-family: monospace; background: #111; color: #fff; padding: 20px; text-align: center; }
         
-        /* Encabezado */
-        h1 { margin-bottom: 5px; color: var(--primary); }
-        .status { font-size: 14px; color: #888; margin-bottom: 20px; }
-        .status.connected { color: var(--primary); font-weight: bold; }
+        .btn {
+            background: #00e676; border: none; padding: 15px 30px; 
+            font-size: 18px; font-weight: bold; border-radius: 10px; cursor: pointer;
+            margin-bottom: 20px; color: black;
+        }
 
-        /* Botón Conectar */
-        .btn-connect {
-            background: linear-gradient(45deg, #2196F3, #21CBF3);
-            border: none; padding: 12px 30px; color: white; border-radius: 25px;
-            font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(33, 203, 243, 0.3);
-            transition: transform 0.2s;
+        .data-box {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
         }
-        .btn-connect:active { transform: scale(0.95); }
-
-        /* Grid de Sensores */
-        .dashboard {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 25px;
-        }
-        .card {
-            background-color: var(--card); padding: 15px; border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .card i { font-size: 30px; margin-bottom: 10px; color: var(--primary); }
-        .card .value { font-size: 24px; font-weight: bold; }
-        .card .label { font-size: 12px; color: #aaa; margin-top: 5px; }
-
-        /* Panel de Control */
-        .controls {
-            margin-top: 30px; background-color: var(--card); padding: 20px; border-radius: 15px;
-        }
-        .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+        .card { background: #222; padding: 15px; border-radius: 10px; border: 1px solid #444; }
+        .val { font-size: 24px; color: #00e676; }
         
-        button.ctrl {
-            flex: 1; padding: 15px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer;
-        }
-        .btn-open { background-color: #ff9800; }
-        .btn-close { background-color: #f44336; }
-        .btn-auto { background-color: #9c27b0; width: 100%; margin-top: 10px; }
-
-        /* Indicador de Modo */
-        .mode-badge {
-            background-color: #333; padding: 5px 15px; border-radius: 10px; font-size: 12px; margin-bottom: 10px; display: inline-block;
+        /* CAJA DE LOGS (EL CHIVATO) */
+        #console {
+            width: 90%; height: 200px; background: #000; border: 2px solid #333;
+            overflow-y: scroll; text-align: left; padding: 10px; 
+            font-size: 12px; font-family: 'Courier New', monospace; margin: 0 auto;
+            color: #0f0;
         }
     </style>
 </head>
 <body>
 
-    <h1>🌱 Smart Invernadero</h1>
-    <p id="status" class="status">Desconectado</p>
-    <button class="btn-connect" onclick="conectarBluetooth()">🔌 CONECTAR BLUETOOTH</button>
+    <h1>🔍 MODO DETECTIVE</h1>
+    <button class="btn" onclick="conectar()">1. CONECTAR</button>
+    <button class="btn" style="background:#ff9800" onclick="enviar('1')">ABRIR</button>
+    <button class="btn" style="background:#f44336" onclick="enviar('0')">CERRAR</button>
 
-    <div class="dashboard">
-        <div class="card">
-            <i class="material-icons">thermostat</i>
-            <div class="value"><span id="val-aire">--</span>°C</div>
-            <div class="label">Aire (DHT11)</div>
-        </div>
-        <div class="card">
-            <i class="material-icons">grass</i>
-            <div class="value"><span id="val-suelo">--</span>°C</div>
-            <div class="label">Suelo (LM35)</div>
-        </div>
-        <div class="card">
-            <i class="material-icons">water_drop</i>
-            <div class="value"><span id="val-hum">--</span>%</div>
-            <div class="label">Humedad</div>
-        </div>
-        <div class="card">
-            <i class="material-icons">wb_sunny</i>
-            <div class="value"><span id="val-luz">--</span></div>
-            <div class="label">Luz (LDR)</div>
-        </div>
+    <div class="data-box">
+        <div class="card">Aire: <span id="t_aire">--</span></div>
+        <div class="card">Suelo: <span id="t_lm35">--</span></div>
+        <div class="card">Hum: <span id="hum">--</span></div>
+        <div class="card">Luz: <span id="luz">--</span></div>
     </div>
 
-    <div class="controls">
-        <div class="mode-badge">MODO ACTUAL: <span id="val-modo" style="color:var(--primary)">AUTO</span></div>
-        <hr style="border-color:#333; opacity:0.3">
-        
-        <p style="margin:5px 0; font-size:14px; color:#aaa;">Control Manual Ventana</p>
-        <div class="btn-group">
-            <button class="ctrl btn-open" onclick="enviar('1')">ABRIR</button>
-            <button class="ctrl btn-close" onclick="enviar('0')">CERRAR</button>
-        </div>
-        <button class="ctrl btn-auto" onclick="enviar('A')">RESTAURAR AUTOMÁTICO</button>
-    </div>
+    <h3>Registro de Eventos (Logs):</h3>
+    <div id="console">Esperando acción...<br></div>
 
     <script>
-        // TUS UUIDS (Deben coincidir con Python)
-        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-        const CHAR_RX      = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; // Escribir
-        const CHAR_TX      = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; // Leer/Notificar
+        // UUIDs (Tienen que ser minusculas)
+        const SRV_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const RX_UUID  = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; // Escribir
+        const TX_UUID  = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; // Leer
 
-        let device, server, service, charRx, charTx;
+        let device, rx, tx;
 
-        async function conectarBluetooth() {
+        function log(msg) {
+            const box = document.getElementById('console');
+            const time = new Date().toLocaleTimeString();
+            box.innerHTML += `[${time}] ${msg}<br>`;
+            box.scrollTop = box.scrollHeight; // Auto scroll
+        }
+
+        async function conectar() {
             try {
-                document.getElementById('status').innerText = "Buscando...";
-                
+                log("🔵 Iniciando búsqueda...");
                 device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'ESP32' }],
-                    optionalServices: [SERVICE_UUID]
+                    optionalServices: [SRV_UUID]
                 });
 
-                server = await device.gatt.connect();
-                service = await server.getPrimaryService(SERVICE_UUID);
+                log("🔵 Conectando GATT...");
+                const server = await device.gatt.connect();
+
+                log("🔵 Buscando Servicio...");
+                const service = await server.getPrimaryService(SRV_UUID);
+
+                log("🔵 Buscando Característica RX (Escritura)...");
+                rx = await service.getCharacteristic(RX_UUID);
+
+                log("🔵 Buscando Característica TX (Lectura)...");
+                tx = await service.getCharacteristic(TX_UUID);
+
+                log("🔵 SUSCRIBIENDO A NOTIFICACIONES...");
+                await tx.startNotifications();
+                tx.addEventListener('characteristicvaluechanged', alRecibirDatos);
                 
-                // Obtener característica para ESCRIBIR (RX)
-                charRx = await service.getCharacteristic(CHAR_RX);
-                
-                // Obtener característica para LEER (TX) y suscribirse
-                charTx = await service.getCharacteristic(CHAR_TX);
-                await charTx.startNotifications();
-                charTx.addEventListener('characteristicvaluechanged', manejarDatos);
+                log("✅ ¡ÉXITO! Esperando datos del ESP32...");
 
-                document.getElementById('status').innerText = "🟢 CONECTADO";
-                document.getElementById('status').classList.add('connected');
-                document.querySelector('.btn-connect').style.display = 'none'; // Ocultar botón
-
-                device.addEventListener('gattserverdisconnected', () => {
-                    document.getElementById('status').innerText = "🔴 Desconectado";
-                    document.getElementById('status').classList.remove('connected');
-                    document.querySelector('.btn-connect').style.display = 'inline-block';
-                    alert("Se perdió la conexión Bluetooth");
-                });
-
-            } catch (error) {
-                console.error(error);
-                document.getElementById('status').innerText = "Error: " + error;
+            } catch (e) {
+                log("❌ ERROR FATAL: " + e);
             }
         }
 
-        // Función que recibe los datos del ESP32
-        function manejarDatos(event) {
-            const valor = new TextDecoder().decode(event.target.value);
-            console.log("Dato recibido:", valor);
-            
-            // El ESP32 envía: "Aire,Suelo,Hum,Luz,Modo"
-            // Ejemplo: "25.0,24.5,60,1024,1"
-            const partes = valor.split(',');
-            
-            if (partes.length >= 5) {
-                document.getElementById('val-aire').innerText = partes[0];
-                document.getElementById('val-suelo').innerText = partes[1];
-                document.getElementById('val-hum').innerText = partes[2];
-                document.getElementById('val-luz').innerText = partes[3];
-                
-                const modoManual = partes[4] === "1";
-                document.getElementById('val-modo').innerText = modoManual ? "MANUAL" : "AUTO";
-                document.getElementById('val-modo').style.color = modoManual ? "#ff9800" : "#00e676";
+        function alRecibirDatos(event) {
+            try {
+                const dec = new TextDecoder();
+                const raw = dec.decode(event.target.value);
+                log("📩 RECIBIDO RAW: " + raw); // AQUÍ VEREMOS SI LLEGA ALGO
+
+                const p = raw.split(',');
+                if (p.length >= 4) {
+                    document.getElementById('t_aire').innerText = p[0];
+                    document.getElementById('t_lm35').innerText = p[1];
+                    document.getElementById('hum').innerText = p[2];
+                    document.getElementById('luz').innerText = p[3];
+                }
+            } catch (e) {
+                log("⚠️ Error procesando datos: " + e);
             }
         }
 
-        async function enviar(comando) {
-            if (!charRx) return alert("¡Conecta primero!");
-            const encoder = new TextEncoder();
-            await charRx.writeValue(encoder.encode(comando));
+        async function enviar(cmd) {
+            if (!rx) return log("⚠️ No conectado");
+            try {
+                await rx.writeValue(new TextEncoder().encode(cmd));
+                log("📤 Enviado: " + cmd);
+            } catch (e) {
+                log("❌ Error enviando: " + e);
+            }
         }
     </script>
 </body>
